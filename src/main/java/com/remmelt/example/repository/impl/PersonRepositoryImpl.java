@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.external.database.DatabaseAccess;
+import com.remmelt.example.exception.DatabaseDiskFullException;
 import com.remmelt.example.exception.EntityNotFoundException;
 import com.remmelt.example.model.Person;
 import com.remmelt.example.repository.PersonRepository;
@@ -29,6 +30,10 @@ public class PersonRepositoryImpl implements PersonRepository {
 	@Override
 	public void savePerson(Person person) {
 		log.info("{}.savePerson({})", "PersonRepositoryImpl", person);
+
+		if (person.getName().equals("Bassie")) {
+			throw new DatabaseDiskFullException("db disk is full, aborting save.");
+		}
 		databaseAccess.savePerson(person);
 	}
 }

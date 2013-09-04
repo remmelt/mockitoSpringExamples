@@ -1,21 +1,22 @@
 package com.remmelt.example.service.impl;
 
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.exceptions.verification.SmartNullPointerException;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 
+import com.remmelt.example.exception.DatabaseDiskFullException;
 import com.remmelt.example.exception.EntityNotFoundException;
 import com.remmelt.example.model.Person;
 import com.remmelt.example.repository.PersonRepository;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
 
@@ -24,79 +25,29 @@ public class PersonServiceImplTest extends AbstractJUnit4SpringContextTests {
 	@InjectMocks
 	private PersonServiceImpl personServiceImpl;
 
-	/**
-	 * To return smart nulls, you can do either this, which gets real tired, real quick,
-	 * or you can extend the DefaultMockitoConfiguration class. You don't need both.
-	 * See http://docs.mockito.googlecode.com/hg/org/mockito/Mockito.html#14
-	 *
-	 * @see org.mockito.configuration.MockitoConfiguration
-	 */
-	@Mock(answer = Answers.RETURNS_SMART_NULLS)
+	@Mock
 	private PersonRepository personRepository;
 
-	@Test(expected = SmartNullPointerException.class)
-	public void testGetPersonWithUnkownId() {
-		int id = 1;
-
-		Person personActual = personServiceImpl.getPersonBy(id);
-		personActual.getEmailAddress();
-
-		/**
-		 * Note that the SmartNullPointerException is on line 40, not on 39!
-		 * This can be very convenient when you are writing unit tests where not all your
-		 * services/repositories are mocked or not completely mocked.
-		 * Instead of "null pointer somewhere, good luck!" you now get a smart message.
-		 */
-	}
-
-	@Test
-	public void testGetPersonByCallsPersonRepositoryWithKnownId() throws Exception {
-		int id = 1;
-		Person personMock = new Person(id, "T. van der Test", "webmaster@example.com");
-
-		// Mock the PersonRepository:
-		Mockito.when(personRepository.getPersonBy(Mockito.eq(id))).thenReturn(personMock);
-		// Or, more concisely:
-		when(personRepository.getPersonBy(eq(id))).thenReturn(personMock);
-
-		Person personActual = personServiceImpl.getPersonBy(id);
-
-		// This obviously succeeds because we're just testing the Mockito framework here:
-		assertThat(personActual).isEqualTo(personMock);
-	}
-
 	/**
-	 * This test no longer works correctly since the returned values are of type SmartNull, and not null.
+	 * Sometimes the database disk is full so it will throw an exception.
+	 * Since this application is not mission critical, we just log and ignore the error.
+	 * <p/>
+	 * Exercise 2
+	 * Make personRepository.savePerson throw a DatabaseDiskFullException
 	 *
-	 * @throws EntityNotFoundException
+	 * @see com.remmelt.example.exception.DatabaseDiskFullException
 	 */
-	@Test
-	@Ignore
-	public void testGetPersonByCallsPersonRepositoryReturnsNullWhenNotMocked() throws EntityNotFoundException {
-		// Note that any calls that are not mocked will return null.
+	@Test // Not allowed to expect anything!
+	public void testSavePersonHandlesDatabaseErrorCorrectly() {
+		// do stuff here
 
-		Person person;
+		personServiceImpl.savePerson(new Person(2, "name", "email"));
 
-		person = personServiceImpl.getPersonBy(1);
-		assertThat(person).isNull();
-
-		person = personServiceImpl.getPersonBy(-9);
-		assertThat(person).isNull();
-
-		// Even when some calls or parameters are mocked:
-
-		int mockedId = 12;
-		when(personRepository.getPersonBy(eq(mockedId))).thenReturn(new Person());
-
-		person = personServiceImpl.getPersonBy(mockedId);
-		assertThat(person).isNotNull();
-
-		person = personServiceImpl.getPersonBy(1);
-		assertThat(person).isNull();
+		Assert.fail(); // then remove the fail()
 	}
 
 	@Test
-	public void testCorrectErrorhandlingWhenEntityNotFound() throws EntityNotFoundException {
+	public void testCorrectErrorHandlingWhenEntityNotFound() throws EntityNotFoundException {
 		int idNotFoundInDb = 1;
 		when(personRepository.getPersonBy(eq(idNotFoundInDb))).thenThrow(new EntityNotFoundException("Entity not found! (MOCK)"));
 
