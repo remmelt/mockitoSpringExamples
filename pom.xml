@@ -10,8 +10,10 @@
 
 	<properties>
 		<spring.version>3.2.4.RELEASE</spring.version>
+
 		<junit.version>4.11</junit.version>
 		<mockito-all.version>1.9.5</mockito-all.version>
+		<fest-assert.version>1.4</fest-assert.version>
 
 		<slf4j.version>1.7.5</slf4j.version>
 		<logback.version>1.0.13</logback.version>
@@ -53,6 +55,12 @@
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-all</artifactId>
 			<version>${mockito-all.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.easytesting</groupId>
+			<artifactId>fest-assert</artifactId>
+			<version>${fest-assert.version}</version>
 			<scope>test</scope>
 		</dependency>
 

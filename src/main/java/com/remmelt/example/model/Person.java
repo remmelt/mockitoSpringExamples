@@ -10,7 +10,7 @@ import lombok.Setter;
 @EqualsAndHashCode
 @AllArgsConstructor
 public class Person {
-	private Long id;
+	private int id;
 	private String name;
 	private String emailAddress;
 }
