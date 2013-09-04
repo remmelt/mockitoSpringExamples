@@ -17,15 +17,6 @@ import com.remmelt.example.repository.PersonRepository;
 import com.remmelt.example.service.EmailService;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.atMost;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
 
 @Slf4j
 @RunWith(MockitoJUnitRunner.class)
@@ -34,44 +25,35 @@ public class PersonServiceImplTest extends AbstractJUnit4SpringContextTests {
 	private PersonServiceImpl personServiceImpl;
 
 	@Mock
-	private PersonRepository personRepository;
+	private PersonRepository personRepository; // <-- you can't use this mock in this exercise!
 
 	@Mock
 	private EmailService emailService;
 
+	/**
+	 * Sometimes you cannot get around mocking a method in the class under test.
+	 * Note that this is usually, mostly, practically always a design error, and in
+	 * legacy code you will sometimes have to deal with it.
+	 * For example, a service you can't or don't want to break apart into smaller pieces where
+	 * you want to unit test a single method but it calls another method in the same class
+	 * that does something you don't want (send email/hit a disk/etc.)
+	 */
 	@Test
-	public void testGetPersonsReturnsListOfPersons() throws EntityNotFoundException {
-		Person person1 = new Person(1, "Bart Simpson", "bart@example.com");
-		Person person2 = new Person(2, "Lisa Simpson", "lisa@example.com");
-		Person person3 = new Person(3, "Maggie Simpson", "maggie@example.com");
+	public void testGetPersonsByReturnsSpecifiedPersonInList() throws EntityNotFoundException {
+		int id = 1;
+		Person person = new Person(id, "Bart Simpson", "bart@example.com");
 
-		// You can chain thenReturns()
-		when(personRepository.getPersonBy(anyInt())).thenReturn(person1).thenReturn(person2).thenReturn(person3);
-		// Any subsequent calls will return the last thenReturn, i.e. person3
-		// Or chain further: .thenAnswer().thenCallRealMethod().thenThrow()
+		// In this example it is of course possible to mock the personRepository like this:
+//		when(personRepository.getPersonBy(eq(id))).thenReturn(person);
+		// This is not allowed in this exercise!
 
-		List<Person> persons = personServiceImpl.getPersonsBy(1, 2, 99);
+		// Try and mock the personServiceImpl.getPersonBy(int) method itself:
 
-		// These are aliases, note that you can pass varargs
-		verifyNoMoreInteractions(emailService);
-		verifyZeroInteractions(emailService);
-		// ... and do the same as
-		//verify(emailService.sendMail(anyString(),anyString(),anyString()), never());
-		// but that does not work with void methods
+		// code goes here
 
-		// Or you can count how many times a mocked method is called:
-		verify(personRepository, times(3)).getPersonBy(anyInt());
-		verify(personRepository, atMost(3)).getPersonBy(anyInt());
-		verify(personRepository, atLeast(3)).getPersonBy(anyInt());
-		verify(personRepository, atLeastOnce()).getPersonBy(anyInt());
+		List<Person> persons = personServiceImpl.getPersonsBy(id);
 
-		// These are identical:
-		// verify(mock)...
-		// verify(mock, times(1))...
-
-		assertThat(persons).hasSize(3);
-		assertThat(persons.get(0)).isEqualTo(person1);
-		assertThat(persons.get(1)).isEqualTo(person2);
-		assertThat(persons.get(2)).isEqualTo(person3);
+		assertThat(persons).hasSize(1);
+		assertThat(persons.get(0)).isEqualTo(person);
 	}
 }
