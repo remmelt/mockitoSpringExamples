@@ -1,118 +1,77 @@
 package com.remmelt.example.service.impl;
 
-import org.junit.Ignore;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.exceptions.verification.SmartNullPointerException;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 
 import com.remmelt.example.exception.EntityNotFoundException;
 import com.remmelt.example.model.Person;
 import com.remmelt.example.repository.PersonRepository;
+import com.remmelt.example.service.EmailService;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.mockito.Mockito.eq;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+@Slf4j
 @RunWith(MockitoJUnitRunner.class)
 public class PersonServiceImplTest extends AbstractJUnit4SpringContextTests {
 	@InjectMocks
 	private PersonServiceImpl personServiceImpl;
 
-	/**
-	 * To return smart nulls, you can do either this, which gets real tired, real quick,
-	 * or you can extend the DefaultMockitoConfiguration class. You don't need both.
-	 * See http://docs.mockito.googlecode.com/hg/org/mockito/Mockito.html#14
-	 *
-	 * @see org.mockito.configuration.MockitoConfiguration
-	 */
-	@Mock(answer = Answers.RETURNS_SMART_NULLS)
+	@Mock
 	private PersonRepository personRepository;
 
-	@Test(expected = SmartNullPointerException.class)
-	public void testGetPersonWithUnkownId() {
-		int id = 1;
-
-		Person personActual = personServiceImpl.getPersonBy(id);
-		personActual.getEmailAddress();
-
-		/**
-		 * Note that the SmartNullPointerException is on line 40, not on 39!
-		 * This can be very convenient when you are writing unit tests where not all your
-		 * services/repositories are mocked or not completely mocked.
-		 * Instead of "null pointer somewhere, good luck!" you now get a smart message.
-		 */
-	}
+	@Mock
+	private EmailService emailService;
 
 	@Test
-	public void testGetPersonByCallsPersonRepositoryWithKnownId() throws Exception {
-		int id = 1;
-		Person personMock = new Person(id, "T. van der Test", "webmaster@example.com");
+	public void testGetPersonsReturnsListOfPersons() throws EntityNotFoundException {
+		Person person1 = new Person(1, "Bart Simpson", "bart@example.com");
+		Person person2 = new Person(2, "Lisa Simpson", "lisa@example.com");
+		Person person3 = new Person(3, "Maggie Simpson", "maggie@example.com");
 
-		// Mock the PersonRepository:
-		Mockito.when(personRepository.getPersonBy(Mockito.eq(id))).thenReturn(personMock);
-		// Or, more concisely:
-		when(personRepository.getPersonBy(eq(id))).thenReturn(personMock);
+		// You can chain thenReturns()
+		when(personRepository.getPersonBy(anyInt())).thenReturn(person1).thenReturn(person2).thenReturn(person3);
+		// Any subsequent calls will return the last thenReturn, i.e. person3
+		// Or chain further: .thenAnswer().thenCallRealMethod().thenThrow()
 
-		Person personActual = personServiceImpl.getPersonBy(id);
+		List<Person> persons = personServiceImpl.getPersonsBy(1, 2, 99);
 
-		// This obviously succeeds because we're just testing the Mockito framework here:
-		assertThat(personActual).isEqualTo(personMock);
-	}
+		// These are aliases, note that you can pass varargs
+		verifyNoMoreInteractions(emailService);
+		verifyZeroInteractions(emailService);
+		// ... and do the same as
+		//verify(emailService.sendMail(anyString(),anyString(),anyString()), never());
+		// but that does not work with void methods
 
-	/**
-	 * This test no longer works correctly since the returned values are of type SmartNull, and not null.
-	 *
-	 * @throws EntityNotFoundException
-	 */
-	@Test
-	@Ignore
-	public void testGetPersonByCallsPersonRepositoryReturnsNullWhenNotMocked() throws EntityNotFoundException {
-		// Note that any calls that are not mocked will return null.
+		// Or you can count how many times a mocked method is called:
+		verify(personRepository, times(3)).getPersonBy(anyInt());
+		verify(personRepository, atMost(3)).getPersonBy(anyInt());
+		verify(personRepository, atLeast(3)).getPersonBy(anyInt());
+		verify(personRepository, atLeastOnce()).getPersonBy(anyInt());
 
-		Person person;
+		// These are identical:
+		// verify(mock)...
+		// verify(mock, times(1))...
 
-		person = personServiceImpl.getPersonBy(1);
-		assertThat(person).isNull();
-
-		person = personServiceImpl.getPersonBy(-9);
-		assertThat(person).isNull();
-
-		// Even when some calls or parameters are mocked:
-
-		int mockedId = 12;
-		when(personRepository.getPersonBy(eq(mockedId))).thenReturn(new Person());
-
-		person = personServiceImpl.getPersonBy(mockedId);
-		assertThat(person).isNotNull();
-
-		person = personServiceImpl.getPersonBy(1);
-		assertThat(person).isNull();
-	}
-
-	@Test
-	public void testCorrectErrorhandlingWhenEntityNotFound() throws EntityNotFoundException {
-		int idNotFoundInDb = 1;
-		when(personRepository.getPersonBy(eq(idNotFoundInDb))).thenThrow(new EntityNotFoundException("Entity not found! (MOCK)"));
-
-		Person person = personServiceImpl.getPersonBy(idNotFoundInDb);
-		assertThat(person).isNull();
-	}
-
-	@Test
-	@Ignore
-	public void testSendEmailToPersonBy() throws Exception {
-		/**
-		 * How do we do this? There are multiple options:
-		 * - external logging smtp server (how to automatically check output?)
-		 * - TestApplicationConfig that wires a different bean instead of the regular EmailService
-		 */
-
-		personServiceImpl.sendEmailToPersonBy(1, "Hi!", "This is a test message.");
+		assertThat(persons).hasSize(3);
+		assertThat(persons.get(0)).isEqualTo(person1);
+		assertThat(persons.get(1)).isEqualTo(person2);
+		assertThat(persons.get(2)).isEqualTo(person3);
 	}
 }

@@ -2,6 +2,9 @@ package com.remmelt.example.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -54,5 +57,15 @@ public class PersonServiceImpl implements PersonService {
 		if (person != null) {
 			emailService.sendMail(person.getEmailAddress(), subject, message);
 		}
+	}
+
+	@Override
+	public List<Person> getPersonsBy(int... ids) {
+//		emailService.sendMail("", "", "");
+		List<Person> persons = new ArrayList<>();
+		for (int id : ids) {
+			persons.add(getPersonBy(id));
+		}
+		return persons;
 	}
 }
