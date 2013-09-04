@@ -3,9 +3,11 @@ package com.remmelt.example.service.impl;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.exceptions.verification.SmartNullPointerException;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 
@@ -22,8 +24,30 @@ public class PersonServiceImplTest extends AbstractJUnit4SpringContextTests {
 	@InjectMocks
 	private PersonServiceImpl personServiceImpl;
 
-	@Mock
+	/**
+	 * To return smart nulls, you can do either this, which gets real tired, real quick,
+	 * or you can extend the DefaultMockitoConfiguration class. You don't need both.
+	 * See http://docs.mockito.googlecode.com/hg/org/mockito/Mockito.html#14
+	 *
+	 * @see org.mockito.configuration.MockitoConfiguration
+	 */
+	@Mock(answer = Answers.RETURNS_SMART_NULLS)
 	private PersonRepository personRepository;
+
+	@Test(expected = SmartNullPointerException.class)
+	public void testGetPersonWithUnkownId() {
+		int id = 1;
+
+		Person personActual = personServiceImpl.getPersonBy(id);
+		personActual.getEmailAddress();
+
+		/**
+		 * Note that the SmartNullPointerException is on line 40, not on 39!
+		 * This can be very convenient when you are writing unit tests where not all your
+		 * services/repositories are mocked or not completely mocked.
+		 * Instead of "null pointer somewhere, good luck!" you now get a smart message.
+		 */
+	}
 
 	@Test
 	public void testGetPersonByCallsPersonRepositoryWithKnownId() throws Exception {
@@ -41,7 +65,13 @@ public class PersonServiceImplTest extends AbstractJUnit4SpringContextTests {
 		assertThat(personActual).isEqualTo(personMock);
 	}
 
+	/**
+	 * This test no longer works correctly since the returned values are of type SmartNull, and not null.
+	 *
+	 * @throws EntityNotFoundException
+	 */
 	@Test
+	@Ignore
 	public void testGetPersonByCallsPersonRepositoryReturnsNullWhenNotMocked() throws EntityNotFoundException {
 		// Note that any calls that are not mocked will return null.
 
