@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.external.database.DatabaseAccess;
+import com.remmelt.example.exception.EntityNotFoundException;
 import com.remmelt.example.model.Person;
 import com.remmelt.example.repository.PersonRepository;
 
@@ -16,9 +17,13 @@ public class PersonRepositoryImpl implements PersonRepository {
 	private DatabaseAccess databaseAccess;
 
 	@Override
-	public Person getPersonBy(int id) {
+	public Person getPersonBy(int id) throws EntityNotFoundException {
 		log.info("{}.getPersonBy({})", "PersonRepositoryImpl", id);
-		return databaseAccess.getPersonBy(id);
+		try {
+			return databaseAccess.getPersonBy(id);
+		} catch (IllegalArgumentException e) {
+			throw new EntityNotFoundException(e.getMessage());
+		}
 	}
 
 	@Override
